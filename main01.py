@@ -12,7 +12,7 @@ def page(request: Request):
 
 @app.get('/button')
 def get_time(request: Request):
-    time=datetime.datetime.now().strftime("%H:%M:%S")
+    time=datetime.datetime.now()
     return templates.TemplateResponse(
         'time_fragment.html',{'request': request,'time':time}
     )
