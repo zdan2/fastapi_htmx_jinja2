@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<button 
+type="button"
+class="favorite syyled"
+hx-get="'/button"
+hx-target="#time"
+hx-swap="innerHTML">
+時刻を取得
+</button>
+<div id="time"></div>
+{%endblock%}
