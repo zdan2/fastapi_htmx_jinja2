@@ -1,0 +1,24 @@
+{% if error %}
+  <div>
+    {{ error }}
+  </div>
+{% endif %}
+
+<form
+  hx-post="/login"
+  hx-target="#login-area"
+  hx-swap="innerHTML"
+  style="display:grid; gap:10px; max-width:360px;"
+>
+  <div>
+    <label for="email">メールアドレス</label><br>
+    <input id="email" name="email" type="email" autocomplete="email" required style="width:100%; padding:8px;">
+  </div>
+
+  <div>
+    <label for="password">パスワード</label><br>
+    <input id="password" name="password" type="password" autocomplete="current-password" required style="width:100%; padding:8px;">
+  </div>
+
+  <button type="submit" style="padding:10px;">ログイン</button>
+</form>
