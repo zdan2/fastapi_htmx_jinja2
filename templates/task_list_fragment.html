@@ -1,4 +1,12 @@
 <ul>{%for t in task_list%}
-    <li>{{t}}</li>
+    <li>{{t.id,t.task}}
+    <button
+  hx-delete="/task/{{ t.id }}"
+  hx-target="#task-list"
+  hx-swap="innerHTML"
+  hx-confirm="削除しますか？">
+  削除
+    </button>
+    </li>
     {%endfor%}
 </ul>
