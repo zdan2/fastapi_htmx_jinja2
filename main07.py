@@ -1,10 +1,26 @@
-from fastapi import FastAPI, Request, Response, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
-from sqlmodel import SQLModel, create_engine, Field, Session, select
+from sqlmodel import SQLModel, Session, select, Field, create_engine
 from typing import Optional
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext
+
+app = FastAPI()
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key="secret",
+    session_cookie="session",
+    https_only=False,
+    same_site="lax",
+)
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+engine = create_engine("sqlite:///db.sqlite3", echo=True)
+
+templates = Jinja2Templates(directory="templates")
 
 
 class User(SQLModel, table=True):
@@ -19,22 +35,7 @@ class Todo(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
 
 
-app = FastAPI()
-
-engine = create_engine("sqlite:///db.sqlite3", echo=True)
-
-app.add_middleware(
-    SessionMiddleware,
-    secret_key="secret_key",
-    session_cookie="session",
-    https_only=False,
-    same_site="lax",
-)
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def hash_password(pw):
+def hash_password(pw: str):
     return pwd_context.hash(pw)
 
 
@@ -42,7 +43,11 @@ def verify_password(pw, hashed):
     return pwd_context.verify(pw, hashed)
 
 
-templates = Jinja2Templates(directory="templates")
+def get_user_id(request: Request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401)
+    return user_id
 
 
 @app.get("/login")
@@ -56,10 +61,10 @@ def login(request: Request, email: str = Form(...), password: str = Form(...)):
         user = session.exec(select(User).where(User.email == email)).first()
     if not user or not verify_password(password, user.password_hash):
         return templates.TemplateResponse(
-            "login.html", {"request": request, "error": "Invalid email or passwoed"}
+            "login.html", {"request": request, "error": "Invalid email or password"}
         )
-
     request.session["user_id"] = user.id
+
     return RedirectResponse(url="/", status_code=303)
 
 
@@ -69,35 +74,30 @@ def logout(request: Request):
     return RedirectResponse(url="/login", status_code=303)
 
 
-def get_current_user(request: Request):
-    user_id = request.session.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=401)
-    return user_id
-
-
 @app.get("/")
 def index(request: Request):
-    user_id = request.session.get("user_id")
+    user_id = get_user_id(request)
     if not user_id:
-        return RedirectResponse("/login", status_code=303)
+        return RedirectResponse(url="/login", status_code=303)
 
     with Session(engine) as session:
         task_list = session.exec(select(Todo).where(Todo.user_id == user_id)).all()
 
     return templates.TemplateResponse(
-        "task.html", {"request": request, "task_list": task_list}
+        "index.html",
+        {"request": request, "task_list": task_list, "user_id": user_id},
     )
 
-
 @app.post("/task/submit")
-def add_task(request: Request, task: str = Form(...)):
-    user_id = request.session.get("user_id")
+def create_task(request: Request, task: str = Form(...)):
+    user_id = get_user_id(request)
     todo = Todo(task=task, user_id=user_id)
     with Session(engine) as session:
         session.add(todo)
         session.commit()
+
         task_list = session.exec(select(Todo).where(Todo.user_id == user_id)).all()
+
     return templates.TemplateResponse(
         "task_list_fragment.html", {"request": request, "task_list": task_list}
     )
@@ -105,49 +105,53 @@ def add_task(request: Request, task: str = Form(...)):
 
 @app.delete("/task/{task_id}")
 def delete_task(request: Request, task_id: int):
-    user_id = get_current_user(request)
-    with Session(engine) as session:
-        todo = session.exec(
-            select(Todo).where(Todo.user_id == user_id, Todo.id == task_id)
-        ).first()
-
-        if not todo:
-            raise HTTPException(status_code=404, detail="Tasjk not found")
-
-        session.delete(todo)
-        session.commit()
-
-        todo_list = session.exec(select(Todo).where(Todo.user_id == user_id)).all()
-
-    return templates.TemplateResponse(
-        "task_list_fragment.html", {"request": request, "task_list": todo_list}
-    )
-
-
-@app.get("/task/{task_id}/edit")
-def edit_task_form(request: Request, task_id: int):
-    user_id = get_current_user(request)
-    with Session(engine) as session:
-        todo = session.exec(
-            select(Todo).where((Todo.id == task_id) & (Todo.user_id == user_id))
-        ).first()
-    if not todo:
-        raise HTTPException(status_code=404, detail="Todo not found")
-
-    return templates.TemplateResponse(
-        "task_edit_fragment.html", {"request": request, "todo": todo}
-    )
-
-
-@app.patch("/task/{task_id}/update")
-def update_task(request: Request, task_id: int, task: str = Form(...)):
-    user_id = get_current_user(request)
+    user_id = get_user_id(request)
     with Session(engine) as session:
         todo = session.exec(
             select(Todo).where(Todo.id == task_id, Todo.user_id == user_id)
         ).first()
+
         if not todo:
-            raise HTTPException(status_code=404, detail="Todo not found")
+            raise HTTPException(status_code=404)
+
+        session.delete(todo)
+        session.commit()
+
+        task_list = session.exec(select(Todo).where(Todo.user_id == user_id)).all()
+
+    return templates.TemplateResponse(
+        "task_list_fragment.html", {"request": request, "task_list": task_list}
+    )
+
+
+@app.get("/task/{task_id}/edit")
+def edit_task(request: Request, task_id: int):
+    user_id = get_user_id(request)
+    with Session(engine) as session:
+        todo = session.exec(
+            select(Todo).where(Todo.id == task_id, Todo.user_id == user_id)
+        ).first()
+
+        if not todo:
+            raise HTTPException(status_code=404)
+
+        return templates.TemplateResponse(
+            "task_edit_fragment.html", {"request": request, "todo": todo}
+        )
+
+
+@app.patch("/task/{task_id}/update")
+def update_task(request: Request, task_id: int, task: str = Form(...)):
+    user_id = get_user_id(request)
+    with Session(engine) as session:
+
+        todo = session.exec(
+            select(Todo).where(Todo.id == task_id, Todo.user_id == user_id)
+        ).first()
+
+        if not todo:
+            raise HTTPException(status_code=404)
+
         todo.task = task
         session.add(todo)
         session.commit()
@@ -157,6 +161,34 @@ def update_task(request: Request, task_id: int, task: str = Form(...)):
     return templates.TemplateResponse(
         "task_list_fragment.html", {"request": request, "task_list": task_list}
     )
+
+
+@app.get("/register")
+def register_page(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+
+@app.post("/register")
+def resister(request: Request, email: str = Form(...), password: str = Form(...)):
+    email = email.strip().lower()
+    if len(password) < 6:
+        return templates.TemplateResponse(
+            "register.html",
+            {"request": request, "error": "パスワードは６文字以上にしてください"},
+        )
+    with Session(engine) as session:
+
+        exists = session.exec(select(User).where(User.email == email)).first()
+
+        if exists:
+            return templates.TemplateResponse(
+                "register.html", {"request": request, "error": "すでに登録されています"}
+            )
+        user = User(email=email, password_hash=hash_password(password))
+        session.add(user)
+        session.commit()
+
+    return RedirectResponse(url="/", status_code=303)
 
 
 def create_admin_if_needed():

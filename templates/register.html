@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>ユーザー登録</h1>
+
+{% if error %}
+  <div style="padding:10px; border:1px solid #f00; background:#fee; margin:10px 0;">
+    {{ error }}
+  </div>
+{% endif %}
+
+<form method="post" action="/register" style="display:grid; gap:10px; max-width:360px;">
+  <div>
+    <label for="email">メールアドレス</label><br>
+    <input id="email" name="email" type="email" autocomplete="email" required style="width:100%; padding:8px;">
+  </div>
+
+  <div>
+    <label for="password">パスワード</label><br>
+    <input id="password" name="password" type="password" autocomplete="new-password" required style="width:100%; padding:8px;">
+  </div>
+
+  <button type="submit" style="padding:10px;">登録</button>
+</form>
+
+<p style="margin-top:12px;">
+  <a href="/login">ログインへ</a>
+</p>
+{% endblock %}

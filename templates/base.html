@@ -4,11 +4,17 @@
         <meta charset="UTF-8"/>
         <title>FASTAPI</title>
         <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-        <form action="/logout" method="post" style="display:inline;">
-        <button type="submit">ログアウト</button>
-        </form>
+
     </head>
     <body>
+          <header>
+    <h1>Todo</h1>
+
+    <form method="post" action="/logout">
+      <button type="submit">ログアウト</button>
+    </form>
+
+  </header>
     <section>
         {% block content %}
         {% endblock %}

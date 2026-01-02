@@ -18,14 +18,14 @@ app = FastAPI()
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key='CHANGE_ME_TO_RANDOM_LONG_SECRET',
-    session_cookie='session',
+    secret_key="CHANGE_ME_TO_RANDOM_LONG_SECRET",
+    session_cookie="session",
     https_only=False,
-    same_site='lax',
+    same_site="lax",
 )
 
 
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(pw: str):
@@ -36,9 +36,9 @@ def verify_password(pw: str, hashed: str):
     return pwd_context.verify(pw, hashed)
 
 
-templates = Jinja2Templates(directory='templates')
+templates = Jinja2Templates(directory="templates")
 
-engine = create_engine('sqlite:///db.sqlite3', echo=False)
+engine = create_engine("sqlite:///db.sqlite3", echo=False)
 
 
 @app.on_event("startup")
@@ -57,38 +57,43 @@ def index(request: Request):
     return templates.TemplateResponse("task.html", {"request": request})
 
 
-@app.get('/login')
+@app.get("/login")
 def login_page(request: Request):
-    return templates.TemplateResponse('login.html', {'request': request})
+    return templates.TemplateResponse("login.html", {"request": request})
 
 
-@app.post('/login')
+@app.post("/login")
 def login(request: Request, email: str = Form(...), password: str = Form(...)):
     with Session(engine) as session:
         user = session.exec(select(User).where(User.email == email)).first()
 
     if not user or not verify_password(password, user.password_hash):
-        return templates.TemplateResponse('login_form_fragment.html', {'request': request, 'error': 'invalid password or email'})
+        return templates.TemplateResponse(
+            "login_form_fragment.html",
+            {"request": request, "error": "invalid password or email"},
+        )
 
-    request.session['user_id'] = user.id
+    request.session["user_id"] = user.id
 
     resp = Response(status_code=204)
     resp.headers["HX-Redirect"] = "/"
     return resp
 
 
-@app.post('/logout')
+@app.post("/logout")
 def logout(request: Request):
     request.session.clear()
-    return RedirectResponse(url='/login', status_code=303)
+    return RedirectResponse(url="/login", status_code=303)
 
 
 def create_admin_if_needed():
     with Session(engine) as session:
-        exists = session.exec(select(User).where(
-            User.email == "admin@example.com")).first()
+        exists = session.exec(
+            select(User).where(User.email == "admin@example.com")
+        ).first()
         if not exists:
-            u = User(email="admin@example.com",
-                     password_hash=hash_password("AdminPassw0rd!"))
+            u = User(
+                email="admin@example.com", password_hash=hash_password("AdminPassw0rd!")
+            )
             session.add(u)
             session.commit()

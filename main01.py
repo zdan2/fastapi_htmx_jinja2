@@ -3,16 +3,18 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import datetime
 
-app=FastAPI()
-templates=Jinja2Templates(directory='templates')
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
-@app.get('/')
+
+@app.get("/")
 def page(request: Request):
-    return templates.TemplateResponse('gettime.html',{'request':request})
+    return templates.TemplateResponse("gettime.html", {"request": request})
 
-@app.get('/button')
+
+@app.get("/button")
 def get_time(request: Request):
-    time=datetime.datetime.now()
+    time = datetime.datetime.now()
     return templates.TemplateResponse(
-        'time_fragment.html',{'request': request,'time':time}
+        "time_fragment.html", {"request": request, "time": time}
     )

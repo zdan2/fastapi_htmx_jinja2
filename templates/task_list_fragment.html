@@ -1,4 +1,4 @@
-<div id="task-list">
+
   <ul>
   {% for t in task_list %}
     <li id="todo-{{ t.id }}">
@@ -7,7 +7,7 @@
       <button
         hx-get="/task/{{ t.id }}/edit"
         hx-target="#todo-{{ t.id }}"
-        hx-swap="outerHTML">
+        hx-swap="innerHTML">
         編集
       </button>
 
@@ -21,4 +21,3 @@
     </li>
   {% endfor %}
   </ul>
-</div>

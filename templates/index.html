@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
+<form
+  hx-post="/task/submit"
+  hx-target="#task-list"
+  hx-swap="innerHTML"
+>
+  <input name="task" required />
+  <button type="submit">追加</button>
+</form>
+
+<div id="task-list">
+  {% include "task_list_fragment.html" %}
+</div>
+
+{% endblock %}
