@@ -5,11 +5,21 @@
   hx-post="/task/submit"
   hx-target="#task-list"
   hx-swap="innerHTML"
+  hx-on::after-request="this.reset()"
 >
   <input name="task" required />
   <button type="submit">追加</button>
 </form>
-
+  <p>タスクを検索</p>
+  <input
+    type="search"
+    name="q"
+    placeholder="キーワードを入力..."
+    hx-get="/task/search"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-target="#task-list"
+    hx-swap="innerHTML"
+  >
 <div id="task-list">
   {% include "task_list_fragment.html" %}
 </div>

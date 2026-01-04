@@ -1,23 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
-    <head>
-        <meta charset="UTF-8"/>
-        <title>FASTAPI</title>
-        <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-
+  <head>
+    <meta charset="UTF-8"/>
+    <title>FASTAPI</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     </head>
-    <body>
-          <header>
-    <h1>Todo</h1>
 
-    <form method="post" action="/logout">
-      <button type="submit">ログアウト</button>
-    </form>
+  <body>
+    <header>
+      
 
-  </header>
-    <section>
+
+      {% if user %}
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span>
+          ようこそ、<b>{{ user.user_name }}</b> さん
+        </span>
+        
+        <form method="post" action="/logout" style="margin: 0;">
+          <button type="submit">ログアウト</button>
+        </form>
+      </div>
+      {% endif %}
+    <h1 style="margin: 0;">Todo</h1>
+    </header>
+
+    <section style="padding: 20px;">
         {% block content %}
         {% endblock %}
     </section>
-    </body>
+  </body>
 </html>

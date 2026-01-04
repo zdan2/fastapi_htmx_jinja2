@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, HTTPException, Response
+from fastapi import FastAPI, Request, Form, HTTPException, Response, Query
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from sqlmodel import SQLModel, Session, select, Field, create_engine
@@ -61,11 +61,14 @@ def login(request: Request, email: str = Form(...), password: str = Form(...)):
         user = session.exec(select(User).where(User.email == email)).first()
     if not user or not verify_password(password, user.password_hash):
         return templates.TemplateResponse(
-            "login.html", {"request": request, "error": "Invalid email or password"}
+            "login_form_fragment.html", {"request": request, "error": "Invalid email or password"}
         )
     request.session["user_id"] = user.id
 
-    return RedirectResponse(url="/", status_code=303)
+    response = Response(status_code=200)
+    response.headers["HX-Redirect"] = "/"
+    
+    return response
 
 
 @app.post("/logout")
@@ -190,6 +193,19 @@ def resister(request: Request, email: str = Form(...), password: str = Form(...)
 
     return RedirectResponse(url="/", status_code=303)
 
+@app.get('/task/search')
+def search_task(request: Request, q:str=Query(default='')):
+    user_id=get_user_id(request)
+    q=q.strip()
+    
+    with Session(engine) as session:
+        stmt=select(Todo).where(Todo.user_id==user_id)
+        
+        if q:
+            stmt=stmt.where(Todo.task.contains(q))
+        task_list=session.exec(stmt).all()
+        
+        return templates.TemplateResponse('task_list_fragment.html',{'request':request,'task_list':task_list})
 
 def create_admin_if_needed():
     with Session(engine) as session:
