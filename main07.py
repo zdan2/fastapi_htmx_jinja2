@@ -61,13 +61,14 @@ def login(request: Request, email: str = Form(...), password: str = Form(...)):
         user = session.exec(select(User).where(User.email == email)).first()
     if not user or not verify_password(password, user.password_hash):
         return templates.TemplateResponse(
-            "login_form_fragment.html", {"request": request, "error": "Invalid email or password"}
+            "login_form_fragment.html",
+            {"request": request, "error": "Invalid email or password"},
         )
     request.session["user_id"] = user.id
 
     response = Response(status_code=200)
     response.headers["HX-Redirect"] = "/"
-    
+
     return response
 
 
@@ -90,6 +91,7 @@ def index(request: Request):
         "index.html",
         {"request": request, "task_list": task_list, "user_id": user_id},
     )
+
 
 @app.post("/task/submit")
 def create_task(request: Request, task: str = Form(...)):
@@ -193,19 +195,23 @@ def resister(request: Request, email: str = Form(...), password: str = Form(...)
 
     return RedirectResponse(url="/", status_code=303)
 
-@app.get('/task/search')
-def search_task(request: Request, q:str=Query(default='')):
-    user_id=get_user_id(request)
-    q=q.strip()
-    
+
+@app.get("/task/search")
+def search_task(request: Request, q: str = Query(default="")):
+    user_id = get_user_id(request)
+    q = q.strip()
+
     with Session(engine) as session:
-        stmt=select(Todo).where(Todo.user_id==user_id)
-        
+        stmt = select(Todo).where(Todo.user_id == user_id)
+
         if q:
-            stmt=stmt.where(Todo.task.contains(q))
-        task_list=session.exec(stmt).all()
-        
-        return templates.TemplateResponse('task_list_fragment.html',{'request':request,'task_list':task_list})
+            stmt = stmt.where(Todo.task.contains(q))
+        task_list = session.exec(stmt).all()
+
+        return templates.TemplateResponse(
+            "task_list_fragment.html", {"request": request, "task_list": task_list}
+        )
+
 
 def create_admin_if_needed():
     with Session(engine) as session:
